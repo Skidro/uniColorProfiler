@@ -102,7 +102,7 @@ def do_set(platform, corun, mint, part, util, pos):
 
 	# Parse the data in each file
 	for item in range(1, 1000):
-		mem_page(parent_dir + part + '/' + corun + '/data_' + mint + '_' + part + '/' + util + '/log' + str(item), platform)
+		mem_page(parent_dir + part + '/' + corun + '/3/data_' + mint + '_' + part + '/' + util + '/log' + str(item), platform)
 
 	# Perform the actual plotting
 	title = util + '%'
@@ -113,8 +113,11 @@ def do_set(platform, corun, mint, part, util, pos):
 def do_box_plot(figname, utilization, parsed_miss_data):
 	""" This function can be used for drawing box plots """
 
+	# Set uniform fontsize for all the captions
+	pl_fontsize = 15
+
 	# Create a figure to save all plots
-	fig, ax1 = pl.subplots(figsize = (10, 5))
+	fig, ax1 = pl.subplots(figsize = (10, 8))
 
 	bp = pl.boxplot(parsed_miss_data, notch=0, sym='+', vert=1, whis=1.5)
 	pl.setp(bp['boxes'], color='black')
@@ -124,19 +127,19 @@ def do_box_plot(figname, utilization, parsed_miss_data):
 	ax1.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
 
 	ax1.set_axisbelow(True)
-	ax1.set_title('Vanilla Solo Miss-Rate Distribution')
-	ax1.set_xlabel('Percentage Utilization')
-	ax1.set_ylabel('Miss-Rate')
+	ax1.set_title('BW-R Miss-Rate Distribution with Three Co-Runners', fontsize = pl_fontsize)
+	ax1.set_xlabel('Percentage Utilization', fontsize = pl_fontsize)
+	ax1.set_ylabel('Miss-Rate', fontsize = pl_fontsize)
 
 	ax1.set_xlim(0.5, 7 + 0.5)
 	top = 35 
 	bottom = -2
 	ax1.set_ylim(bottom, top)
 	xtickNames = pl.setp(ax1, xticklabels = utilization)
-	pl.setp(xtickNames, rotation=45, fontsize=8)
+	pl.setp(xtickNames, rotation = 45, fontsize = pl_fontsize)
 
 	numBoxes = 7
-	boxColors = ['darkkhaki', 'royalblue']    
+	boxColors = ['darkkhaki', 'darkkhaki']
 	medians = list(range(numBoxes))
 	for i in range(numBoxes):
 	    box = bp['boxes'][i]
@@ -174,14 +177,14 @@ def do_box_plot(figname, utilization, parsed_miss_data):
 	for tick, label in zip(range(7), ax1.get_xticklabels()):
 	    k = tick % 2
 	    ax1.text(pos[tick], top - (top*0.05), upperLabels[tick],
-	             horizontalalignment='center', size='x-small', weight=weights[k], color=boxColors[0])  
+	             horizontalalignment='center', size='small', weight=weights[k], color=boxColors[0])
 	    ax1.text(pos[tick], bottom - (bottom*0.25), bottomLabels[tick],
-	             horizontalalignment='center', size='x-small', weight=weights[k], color=boxColors[1])  
+	             horizontalalignment='center', size='small', weight=weights[k], color=boxColors[1])
        
 	line_data = []
 	for item in range(1, 8, 1):
 		line_data.append(np.mean(parsed_miss_data[item - 1]))
-		pl.text(item - 0.2, line_data[item - 1], '%.1f' % line_data[item - 1])
+		pl.text(item - 0.2, line_data[item - 1], '%.1f' % line_data[item - 1], fontsize = pl_fontsize)
 
 	pl.plot(range(1, 8, 1), line_data, 'r')
 
@@ -211,13 +214,13 @@ def main():
 	# Define the name to save the figure with
 	if platform == 'tegra':
 		pos = 1
-		figname = 'Tegra_BW_Mint_Solo.png'
+		figname = 'Tegra_BW_Mint_Corun_3.png'
 
 		for util in utilization:
 			util = str(util)
 
 			# Plot the data one set at a time
-			do_set(platform, 'solo', 'mint', part, util, pos)
+			do_set(platform, 'corun', 'mint', part, util, pos)
 
 			# Update the position for the next plot
 			pos += 1
