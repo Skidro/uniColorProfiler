@@ -1,0 +1,63 @@
+The graphs for all the experiments should be named according to the following scheme:
+The data tree should also be stored in this format for ease of parsing.
+
+<Platform>_<Benchmark>_<Linux>_<Buddy>_<Data>_<Corun>_<Utilization>.png
+
+1. Platform
+   Consists of two letters denoting the target platform. 
+	TG	->	Tegra
+	XE	->	Xeon <Nemo>
+	XT	->	Xeon <Eternity>
+	XC	->	Xeon <Caramel>
+	XM	->	Xeon <Icecream>
+
+2. Benchmark
+   Two letters indicating the benchmark name
+	BW	->	Bandwidth <Read>
+	BT	->	Bandwidth <Write>
+	LT	->	Latency
+	DP	->	Disparity
+	LL	->	Localization
+	SF	->	SIFT
+
+3. Linux
+   Two letters indicating whether the target linux was modified or not
+	VN	->	Unmodified Vanilla Linux
+	PL	->	Linux Patched with PALLOC
+	UN	->	Linux with PALLOC and Uniform Coloring
+
+4. Buddy
+   Two letters indicating the page allocation scheme used
+	BD	->	Unmodified Buddy Allocator
+	BW	->	Unmodified Buddy with Way Partitioning
+	PL	->	Allocation via PALLOC
+	UN	->	Allocation via PALLOC with Uniform Coloring
+
+5. Data
+   Type of analyzed data
+	PF	->	Perf data regarding miss-rate and total execution time
+	CL	->	Page coloring data indicating color utilization
+
+6. Corun
+   Number of co-runners
+	00	->	Solo
+	01	->	Single Co-runner
+	02	->	Two Co-runners
+	...
+	11	->	Eleven Co-runners
+
+7. Utilization
+   Utilization of the allocated partition or data size
+	CF	->	CIF
+	QF	->	QCIF
+	SF	->	SQCIF
+	TS	->	Test
+	VG	->	VGA
+	HD	->	Full-HD
+	25	->	25% Utilization
+	37	->	37% Utilization
+	50	->	50% Utilization
+	63	->	63% Utilization
+	75	->	75% Utilization
+	87	->	87% Utilization
+	100	->	100% Utilization
