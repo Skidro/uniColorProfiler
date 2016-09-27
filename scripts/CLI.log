@@ -1,0 +1,7 @@
+Platform	: TG,XE,XT,XC,XM
+Benchmark	: BW,BT,LT,DP,LL,SF
+Linux		: VN,PL,UN
+Buddy		: BD,BW,PL,UN
+Data		: PF,CL
+Corun		: 00,01,02,03,04,05,06,07,08,09,10,11
+Utilization	: CF,QF,SF,TS,VG,HD,25,37,50,63,75,87,100

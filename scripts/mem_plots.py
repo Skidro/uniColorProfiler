@@ -1,22 +1,23 @@
-import re
+import re, sys
 import numpy as np
 import pylab as pl
+from math import ceil
 
 from generic_page import File
 
 # Set to 1 for debugging
-debug = 0
+boxplot_miss_rate_debug = 0
 
 # Global Data
-plot_data = {}
-parsed_miss_data = []
-parsed_time_data = []
+plot_performance_data = {}
+plot_performance_data["miss_rate"] = []
+plot_performance_data["time"] = []
 
 class mem_page(File):
 	""" A subclass of file-type objects to process miss-rate in tegra
 	    platform """
 
-	def __init__(self, filename, platform = 'Xeon'):
+	def __init__(self, filename, platform = 'XE'):
 		# Invoke the super-class constructor method
 		super(mem_page, self).__init__(filename)
 
@@ -36,12 +37,12 @@ class mem_page(File):
 		with open(self.name, 'r') as fdi:
 			for line in fdi:
 				# Check the platform type to select appropriate regex
-				if self.platform == 'Xeon':
+				if self.platform == 'XE':
 					# Get the required lines
 					refsLine = re.match('^\D*([\d,]+) cache-references.*$', line)
 					missLine = re.match('^\D*([\d,]+) cache-misses.*$', line)
 					timeLine = re.match('^\D*([\d.]+) seconds time.*$', line)
-				else:
+				elif self.platform == 'TG':
 					# Get the required lines
 					refsLine = re.match('^\D*([\d,]+) r50.*$', line)
 					missLine = re.match('^\D*([\d,]+) r52.*$', line)
@@ -61,56 +62,17 @@ class mem_page(File):
 
 		if accesses == 0 or misses == 0 or time == 0:
 			print 'Unexpected File : %s' % (self.name)
+			sys.exit(2)
 
 		# Extract the file number
-		file_number = (re.match("^.*log(\d+)", self.name)).group(1)
+		file_number = (re.match("^.*/(\d+)", self.name)).group(1)
 
 		# Insert the data in the hash
-		plot_data[file_number] = (accesses, misses, time)
+		plot_performance_data[file_number] = (accesses, misses, time)
 
 		return
 
-# plot_data
-# Function to plot_data parsed from the files
-def plotdata(position, title):
-	""" Function for plotting the collected data about miss-rate """
-
-	mr_array_usort = []
-	time_array = []
-
-	for item in plot_data.keys():
-		mr_array_usort.append((float(plot_data[item][1])/plot_data[item][0]) * 100)
-		time_array.append(plot_data[item][2])
-
-	# Push the miss-rate data into global array
-	parsed_miss_data.append(mr_array_usort)
-	parsed_time_data.append(time_array)
-
-	return
-	
-	
-def do_set(platform, corun, mint, part, util, pos):
-	""" Helper function for plotting mutiple data sets """
-
-	# Set the parent directory path based on platform name
-	parent_dir = ''
-
-	if platform == 'tegra':
-		parent_dir = '../data/tegra/data/'
-	else:
-		parent_dir = '../data/'
-
-	# Parse the data in each file
-	for item in range(1, 1000):
-		mem_page(parent_dir + part + '/' + corun + '/3/data_' + mint + '_' + part + '/' + util + '/log' + str(item), platform)
-
-	# Perform the actual plotting
-	title = util + '%'
-	plotdata(pos, title)
-
-	return
-
-def do_box_plot(figname, utilization, parsed_miss_data):
+def performance_boxplots(figname, title, data_type, utilization, parsed_data):
 	""" This function can be used for drawing box plots """
 
 	# Set uniform fontsize for all the captions
@@ -119,7 +81,11 @@ def do_box_plot(figname, utilization, parsed_miss_data):
 	# Create a figure to save all plots
 	fig, ax1 = pl.subplots(figsize = (10, 8))
 
-	bp = pl.boxplot(parsed_miss_data, notch=0, sym='+', vert=1, whis=1.5)
+	# Calculate the extrema of parsed data
+	maxs = [np.max(x) for x in parsed_data]
+	mins = [np.min(x) for x in parsed_data]  
+
+	bp = pl.boxplot(parsed_data, notch=0, sym='+', vert=1, whis=1.5)
 	pl.setp(bp['boxes'], color='black')
 	pl.setp(bp['whiskers'], color='black')
 	pl.setp(bp['fliers'], color='red', marker='+')
@@ -127,13 +93,19 @@ def do_box_plot(figname, utilization, parsed_miss_data):
 	ax1.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
 
 	ax1.set_axisbelow(True)
-	ax1.set_title('BW-R Miss-Rate Distribution with Three Co-Runners', fontsize = pl_fontsize)
+	ax1.set_title(title, fontsize = pl_fontsize)
 	ax1.set_xlabel('Percentage Utilization', fontsize = pl_fontsize)
-	ax1.set_ylabel('Miss-Rate', fontsize = pl_fontsize)
 
-	ax1.set_xlim(0.5, 7 + 0.5)
-	top = 35 
-	bottom = -2
+	if data_type == 'm':
+		ax1.set_ylabel('Miss-Rate', fontsize = pl_fontsize)
+		top = ceil(max(maxs)) + 5
+		bottom = -2
+	else:
+		ax1.set_ylabel('Time (seconds)', fontsize = pl_fontsize)
+		top = ceil(max(maxs)) + 0.5
+		bottom = -0.2
+
+	ax1.set_xlim(0.5, len(utilization) + 0.5)
 	ax1.set_ylim(bottom, top)
 	xtickNames = pl.setp(ax1, xticklabels = utilization)
 	pl.setp(xtickNames, rotation = 45, fontsize = pl_fontsize)
@@ -164,13 +136,11 @@ def do_box_plot(figname, utilization, parsed_miss_data):
 	        medians[i] = medianY[0]
 	    # Finally, overplot the sample averages, with horizontal alignment
 	    # in the center of each box
-	    pl.plot([np.average(med.get_xdata())], [np.average(parsed_miss_data[i])],
+	    pl.plot([np.average(med.get_xdata())], [np.average(parsed_data[i])],
 	             color='w', marker='*', markeredgecolor='k')  
 
 	pos = np.arange(7) + 1
 	boxColors = ['red', 'green']  
-	maxs = [np.max(x) for x in parsed_miss_data]
-	mins = [np.min(x) for x in parsed_miss_data]  
 	upperLabels = [str(np.round(s, 2)) for s in maxs]
 	bottomLabels = [str(np.round(s, 2)) for s in mins]
 	weights = ['bold', 'semibold']
@@ -183,12 +153,10 @@ def do_box_plot(figname, utilization, parsed_miss_data):
        
 	line_data = []
 	for item in range(1, 8, 1):
-		line_data.append(np.mean(parsed_miss_data[item - 1]))
+		line_data.append(np.mean(parsed_data[item - 1]))
 		pl.text(item - 0.2, line_data[item - 1], '%.1f' % line_data[item - 1], fontsize = pl_fontsize)
 
 	pl.plot(range(1, 8, 1), line_data, 'r')
-
-	pl.show()
 
 	# Save the figure
 	fig.savefig(figname)
@@ -196,49 +164,69 @@ def do_box_plot(figname, utilization, parsed_miss_data):
 
 	# All done here
 	return
-  
+	
+# collate_performance_data
+# Function to collate parsed data from the performance files
+def collate_performance_data():
+
+	mr_array   = []
+	time_array = []
+
+	for item in range(1, 1001, 1):
+		mr_array.append((float(plot_performance_data[str(item)][1])/plot_performance_data[str(item)][0]) * 100)
+		time_array.append(plot_performance_data[str(item)][2])
+	
+	# Push the miss-rate data into global hash
+	plot_performance_data["miss_rate"].append(mr_array)
+	plot_performance_data["time"].append(time_array)
+
+	return
+	
+def do_performance_boxplots(parent_dir, print_title):
+	""" Helper function for making a single plot """
+
+	# Create dimensions for the plot
+	fig = pl.figure(1, figsize = (10, 8))
+
+	# Specify the utilization range for this plot
+	utilization = [25, 37, 50, 63, 75, 87, 100]
+	utilization = [str(x) for x in utilization]
+
+	fig_prefix = '../figs/' + ('_'.join(parent_dir.split('/')[2:]))[:-1]
+	mr_figname = fig_prefix + '_MR.png'
+	tm_figname = fig_prefix + '_TM.png'
+
+	# Get the platform name from input string
+	platform_name = str(re.match(r'^.*/data/([A-Z]+)/.*$', parent_dir).group(1))
+
+	# Parse the data in each file
+	for util in utilization:
+		for item in range(1, 1001):
+			mem_page(parent_dir + util + '/' + str(item), platform = platform_name)
+		
+		# Collate the data collected so far
+		collate_performance_data()
+
+	# Perform the actual plotting
+	corun = str(re.match(r'^.*/(\d+)/$', parent_dir).group(1))
+	
+	if print_title:
+		title = 'Corun : %s' % (corun)
+	else:
+		title = ''
+	
+	# Create boxplot for time data
+	performance_boxplots(tm_figname, title, 't', utilization, plot_performance_data["time"])
+
+	# Create boxplot for miss-rate data
+	performance_boxplots(mr_figname, title, 'm', utilization, plot_performance_data["miss_rate"])
+
+	return
+	
 def main():
-	""" This is the primary entry point into the script """
 
-	# Set the partition type
-	part = 'sets'
-	platform = 'tegra'
-
-	if platform == 'tegra' or part == 'ways':
-		part_size = '1536'
-		utilization = [25, 37, 50, 63, 75, 87, 100]
-	else:
-		part_size = '1920'
-		ws_size = '1700'
-
-	# Define the name to save the figure with
-	if platform == 'tegra':
-		pos = 1
-		figname = 'Tegra_BW_Mint_Corun_3.png'
-
-		for util in utilization:
-			util = str(util)
-
-			# Plot the data one set at a time
-			do_set(platform, 'corun', 'mint', part, util, pos)
-
-			# Update the position for the next plot
-			pos += 1
-
-		# Draw the box-plots
-		do_box_plot(figname, utilization, parsed_miss_data)
-
-	else:
-		figname = 'Xeon_BW_' + part.upper() + '.png'
-
-		# Place a title for these plots
-		pl.suptitle('Xeon | BW-R | ' + part_size + ' | ' + ws_size + ' | ' + part[0].upper() + part[1:])
-
-		# Plot the data one set at a time
-		do_set(platform, 'solo', 'mint', '', part, 1)
-		do_set(platform, 'corun', 'mint', '', part, 3)
-		do_set(platform, 'solo', 'modf', '', part, 2)
-		do_set(platform, 'corun', 'modf', '', part, 4)
+	# Plot the default data set
+	do_performance_boxplots('../data/TG/BW/UN/PL/PF/00/', False)
 
 	return
 

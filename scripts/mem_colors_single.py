@@ -1,19 +1,17 @@
-import re
+import re, sys
 import numpy as np
 import pylab as pl
 import scipy.stats as stats
+from math import ceil
 
 from generic_page import *
 from helper_functions import *
 
 # Set to 1 if debugging required
-debug = 0
+pdf_std_debug = 0
 
 # Global Data
-plot_data = {}
-avg_std = []
-extrema_std = []
-extrema_files = []
+plot_std_clr_data = {}
 ALLD_COLORS = 0x00FFFFFF
 
 class mem_color(File, Helper):
@@ -56,9 +54,10 @@ class mem_color(File, Helper):
 
 		if total_pages == 0 or pages == []:
 			print 'Unexpected File : %s' % (self.name)
+			sys.exit(2)
 
 		# Extract the file number
-		file_number = (re.match("^.*colors(\d+)", self.name)).group(1)
+		file_number = (re.match("^.*/(\d+)$", self.name)).group(1)
 
 		color = 0
 		for page_items in pages:
@@ -75,22 +74,15 @@ class mem_color(File, Helper):
 
 		# Calculate the standard deviation of allowed color pages
 		std_clr_pages = np.std(sorted_clr_pages)
-		
 
 		# Insert the data in the hash
-		plot_data[file_number] = (total_pages, alld_clr_pages, rest_clr_pages, std_clr_pages)
-
-		if debug:
-			print 'plot_data[' + file_number + '] : ', plot_data[file_number]
-			print 'pages        : ', pages
-			print 'alld_pages   : ', alld_pages
-			print 'bit_list     : ', bit_list
+		plot_std_clr_data[file_number] = (total_pages, alld_clr_pages, rest_clr_pages, std_clr_pages)
 
 		return
 
-# plot_data
-# Function to plot_data parsed from the files
-def plotdata(position, title):
+# plot_clr_pdf
+# Function to plot probability density function of color distribution of pages
+def plot_clr_pdf(title):
 	""" Function for plotting the collected data about page distribution """
 
 	# Font size for plot titles
@@ -98,6 +90,7 @@ def plotdata(position, title):
 	pl_rows = 1
 	pl_cols = 1
 
+	pdf_clr_std_data = {}
 	std_clr_array = []
 	alld_pages_array = []
 	rest_pages_array = []
@@ -105,11 +98,12 @@ def plotdata(position, title):
 	number = 0
 	max_std = 0.0
 	min_std = 100.0
-	for item in plot_data.keys():
-		std_clr_array.append(plot_data[item][3])
-		rest_pages_array.append(plot_data[item][2])
-		alld_pages_array.append(plot_data[item][1])
-		total_pages_array.append(plot_data[item][0])
+
+	for item in plot_std_clr_data.keys():
+		std_clr_array.append(plot_std_clr_data[item][3])
+		rest_pages_array.append(plot_std_clr_data[item][2])
+		alld_pages_array.append(plot_std_clr_data[item][1])
+		total_pages_array.append(plot_std_clr_data[item][0])
 
 		if std_clr_array[number] > max_std:
 			max_std = std_clr_array[number]
@@ -128,129 +122,94 @@ def plotdata(position, title):
 	# Sort the data
 	std_array = sorted(std_clr_array)
 
-	if debug:
-		# Display the data
-		print "Max File : %d | Min File : %d" % (max_file, min_file)
-		print "Max Std : %.3f | Min Std : %.3f " % (max_std, min_std)
-
 	# Calculate the mean and standard deviation
 	std_clr_mean = np.mean(std_array)
 	std_clr_std  = np.std(std_array)
 	
 	# Push the data into the global arrays
-	avg_std.append(std_clr_mean)
-	extrema_std.append((min_std, max_std))
-	extrema_files.append((min_file, max_file))
+	pdf_clr_std_data['average'] = std_clr_mean
+	pdf_clr_std_data['extrema_std'] = (min_std, max_std)
+	pdf_clr_std_data['extrema_files'] = (min_file, max_file)
 
 	# Fit a normal curve on the sorted data
 	fit = stats.norm.pdf(std_array, std_clr_mean, std_clr_std)
-
-	# Create a sub-plot for all the plots
-	pl.subplot(pl_rows, pl_cols, position)
 
 	# Plot the normal curve
 	pl.plot(std_array, fit)
 
 	# Plot the histogram along the curve
-	pl.hist(std_array, normed = True, bins = np.arange(min_std, max_std, ((max_std - min_std) / 10)))
+	hist_bins = np.arange(min_std, max_std, ((max_std - min_std) / 10))
+	hist_x, hist_y, _ = pl.hist(std_array, normed = True, bins = hist_bins)
+	y_limit = ceil(hist_x.max()) + 0.1
 
 	# Plot vertical lines to indicate min-max values
-	pl.plot([max_std, max_std], [0, 1], '-r')
-	pl.plot([min_std, min_std], [0, 1], '-g')
+	pl.plot([max_std, max_std], [0, y_limit], '-r')
+	pl.plot([min_std, min_std], [0, y_limit], '-g')
 
 	# State the x-label and y-label
 	pl.xlabel(r'$\sigma$ of Page Distribution')
 	pl.ylabel('PDF')
 
+	# Hide the ticks on the y-axis
+	pl.gca().yaxis.set_major_locator(pl.NullLocator())
+
 	# Set axes limits
-	pl.xlim(0, 8)
-	pl.ylim(0, 1)
+	pl.xlim(0, 10)
+	pl.ylim(0, y_limit)
 
 	# Set the title of the plot
-	pl.text(std_clr_mean + 0.2, 0.9, r'$\mu$ = ' + format(std_clr_mean, '0.2f'))
-	pl.text(max_std + 0.1, 0.5, r'max( $\sigma$ ) = ' + format(max_std, '0.2f'))
-	pl.text(min_std - 1.75, 0.5, r'min( $\sigma$ ) = ' + format(min_std, '0.2f'))
-
-	pl.show()
-
-	return
-
-def do_set(platform, corun, mint, part, util, pos):
-	""" Helper function for plotting mutiple data sets """
-
-	# Reset the global plot-data hash
-	plot_data = {}
-
-	# Set the parent directory path based on platform name
-	parent_dir = ''
-
-	if platform == 'tegra':
-		parent_dir = '../data/tegra/data/'
+	if ((max_std - min_std) < 2):
+		pl.text(max_std + 0.1, y_limit - 1, r'$\mu$ = ' + format(std_clr_mean, '0.2f'))
 	else:
-		parent_dir = '../data/'
+		pl.text(std_clr_mean + 0.2, y_limit - 0.1, r'$\mu$ = ' + format(std_clr_mean, '0.2f'))
+
+	pl.text(max_std + 0.1, 0.5, r'max( $\sigma$ ) = ' + format(max_std, '0.2f'), color = 'r')
+
+	if (min_std < 2):
+		pl.text(max_std + 0.1, 0.3, r'min( $\sigma$ ) = ' + format(min_std, '0.2f'), color = 'g')
+	else:
+		pl.text(min_std - 1.75, 0.5, r'min( $\sigma$ ) = ' + format(min_std, '0.2f'), color = 'g')
+		
+	pl.title(title)
+
+	if pdf_std_debug:
+		pl.show()
+
+	return pdf_clr_std_data
+
+def do_clr_pdf(parent_dir, print_title):
+	""" Helper function for making a single plot """
+
+	# Create dimensions for the plot
+	fig = pl.figure(1, figsize = (10, 8))
+
+	figname = ('_'.join(parent_dir.split('/')[2:]))[:-1] + '.png'
 
 	# Parse the data in each file
 	for item in range(1, 1000):
-		mem_color(parent_dir + part + '/' + corun + '/data_' + mint + '_' + part + '/' + util + '/colors' + str(item))
+		mem_color(parent_dir + str(item))
 
 	# Perform the actual plotting
-	title = util + '%'
-	plotdata(pos, title)
+	util  = str(re.match(r'^.*/(\d+)/$', parent_dir).group(1))
+	corun = str(re.match(r'^.*/(\d+)/.*/$', parent_dir).group(1))
+	
+	if print_title:
+		title = 'Corun : %s | Utilization : %s%%' % (corun, util)
+	else:
+		title = ''
 
-	return
+	pdf_clr_hash = plot_clr_pdf(title)
+
+	# Save the figure
+	fig.savefig('../figs/' + figname)
+
+	return pdf_clr_hash
 
 def main():
-	""" This is the primary entry point into the script """
 
-	# Create a figure to save all plots
-	fig = pl.figure(1, figsize = (10, 8))
+	# Plot the data set
+	do_clr_pdf('../data/TG/BW/UN/PL/CL/00/100/', True)
 
-	# Set the partition type
-	part = 'sets'
-	platform = 'tegra'
-
-	if platform == 'tegra' or part == 'ways':
-		part_size = '1536'
-		utilization = [100]
-	else:
-		part_size = '1920'
-		ws_size = '1700'
-
-	# Define the name to save the figure with
-	if platform == 'tegra':
-		pos = 1
-		figname = 'Tegra_BW_Mint_CLRS_Scaled.png'
-
-		# Place a title for this graph
-		pl.title('BW-R Solo PDF of Page Distribution - 100% Utilizaiton')
-		
-		for util in utilization:
-			util = str(util)
-
-			# Plot the data one set at a time
-			do_set(platform, 'solo', 'mint', part, util, pos)
-
-			# Update the position for the next plot
-			pos += 1		
-	else:
-		figname = 'Xeon_BW_' + part.upper() + '_CLRS.png'
-
-		# Place a title for this graph
-		pl.suptitle('Xeon | BW-R | ' + part_size + ' | ' + ws_size + ' | ' + part[0].upper() + part[1:] + ' | Colors');
-
-		# Plot the data one set at a time
-		do_set(platform, 'solo', 'mint', '', part, 1)
-		do_set(platform, 'corun', 'mint', '', part, 3)
-		do_set(platform, 'solo', 'modf', '', part, 2)
-		do_set(platform, 'corun', 'modf', '', part, 4)		
-
-	fig.savefig(figname)
-	
-	# Print the global data
-	print '<Std>      : ', avg_std
-	print '[Std]      : ', extrema_std
-	print 'Files      : ', extrema_files
-	
 	return
 
 # Desginate main as the entry point
