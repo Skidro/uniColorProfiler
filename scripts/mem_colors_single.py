@@ -182,7 +182,6 @@ def do_clr_pdf(parent_dir, print_title):
 
 	# Create dimensions for the plot
 	fig = pl.figure(1, figsize = (10, 8))
-
 	figname = ('_'.join(parent_dir.split('/')[2:]))[:-1] + '.png'
 
 	# Parse the data in each file

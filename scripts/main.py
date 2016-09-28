@@ -5,6 +5,7 @@ import re
 # Import data from sub-scripts
 from mem_colors_single import *
 from mem_plots import *
+from mem_bins import *
 
 
 # Global Data
@@ -148,6 +149,21 @@ def main(argv):
 	if data == 'CL':
 		# Plot the data regarding the standard deviation of colors
 		pdf_clr_std_hash = do_clr_pdf(parent_dir, True)
+
+		# Create a hash for plotting the bin utilization of extrema files
+		target_hash = {}
+		target_hash["file"] = str(pdf_clr_std_hash["extrema_files"][0])
+		target_hash["type"] = "MN"
+
+		# Plot the bin utilization for max-std case
+		do_cache_bins_histogram(parent_dir, target_hash, True)
+
+		# Update the hash for min-std case
+		target_hash["file"] = str(pdf_clr_std_hash["extrema_files"][1])
+		target_hash["type"] = "MX"
+
+		# Plot the bin utilization for min-std case
+		do_cache_bins_histogram(parent_dir, target_hash, True)
 
 	if data == 'PF':
 		# Plot the box plots for all utilizations
