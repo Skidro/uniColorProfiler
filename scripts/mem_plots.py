@@ -110,7 +110,7 @@ def performance_boxplots(figname, title, data_type, utilization, parsed_data):
 	xtickNames = pl.setp(ax1, xticklabels = utilization)
 	pl.setp(xtickNames, rotation = 45, fontsize = pl_fontsize)
 
-	numBoxes = 7
+	numBoxes = len(utilization)
 	boxColors = ['darkkhaki', 'darkkhaki']
 	medians = list(range(numBoxes))
 	for i in range(numBoxes):
@@ -152,11 +152,11 @@ def performance_boxplots(figname, title, data_type, utilization, parsed_data):
 	             horizontalalignment='center', size='small', weight=weights[k], color=boxColors[1])
        
 	line_data = []
-	for item in range(1, 8, 1):
+	for item in range(1, numBoxes + 1, 1):
 		line_data.append(np.mean(parsed_data[item - 1]))
 		pl.text(item - 0.2, line_data[item - 1], '%.1f' % line_data[item - 1], fontsize = pl_fontsize)
 
-	pl.plot(range(1, 8, 1), line_data, 'r')
+	pl.plot(range(1, numBoxes + 1, 1), line_data, 'r')
 
 	# Save the figure
 	fig.savefig(figname)
@@ -188,16 +188,22 @@ def do_performance_boxplots(parent_dir, print_title):
 	# Create dimensions for the plot
 	fig = pl.figure(1, figsize = (10, 8))
 
+	# Get the platform name from input string
+	platform_name = str(re.match(r'^.*/data/([A-Z]+)/.*$', parent_dir).group(1))
+
+	# Extract the benchmark name
+	benchmark_name = re.match('^.*/data/' + platform_name + '/([A-Z]+)/.*$', parent_dir).group(1)
+
 	# Specify the utilization range for this plot
-	utilization = [25, 37, 50, 63, 75, 87, 100]
-	utilization = [str(x) for x in utilization]
+	if benchmark_name == 'BW':
+		utilization = [25, 37, 50, 63, 75, 87, 100]
+		utilization = [str(x) for x in utilization]
+	else:
+		utilization = ['CF', 'VG']
 
 	fig_prefix = '../figs/' + ('_'.join(parent_dir.split('/')[2:]))[:-1]
 	mr_figname = fig_prefix + '_MR.png'
 	tm_figname = fig_prefix + '_TM.png'
-
-	# Get the platform name from input string
-	platform_name = str(re.match(r'^.*/data/([A-Z]+)/.*$', parent_dir).group(1))
 
 	# Parse the data in each file
 	for util in utilization:
@@ -226,7 +232,7 @@ def do_performance_boxplots(parent_dir, print_title):
 def main():
 
 	# Plot the default data set
-	do_performance_boxplots('../data/TG/BW/UN/PL/PF/00/', False)
+	do_performance_boxplots('../data/TG/LL/UN/PL/PF/00/', False)
 
 	return
 
