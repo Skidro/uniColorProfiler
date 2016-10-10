@@ -12,7 +12,7 @@ pdf_std_debug = 0
 
 # Global Data
 plot_std_clr_data = {}
-ALLD_COLORS = 0x00FFFFFF
+ALLD_COLORS = 0x0FFFFFFF
 
 class mem_color(File, Helper):
 	""" A subclass of file-type objects to process miss-rate in tegra
@@ -154,19 +154,19 @@ def plot_clr_pdf(title):
 	pl.gca().yaxis.set_major_locator(pl.NullLocator())
 
 	# Set axes limits
-	pl.xlim(0, 10)
+	pl.xlim(0, 12)
 	pl.ylim(0, y_limit)
 
 	# Set the title of the plot
 	if ((max_std - min_std) < 2):
-		pl.text(max_std + 0.1, y_limit - 1, r'$\mu$ = ' + format(std_clr_mean, '0.2f'))
+		pl.text(max_std + 0.1, y_limit - 5, r'$\mu$ = ' + format(std_clr_mean, '0.2f'))
 	else:
-		pl.text(std_clr_mean + 0.2, y_limit - 0.1, r'$\mu$ = ' + format(std_clr_mean, '0.2f'))
+		pl.text(std_clr_mean + 0.2, y_limit - 0.4, r'$\mu$ = ' + format(std_clr_mean, '0.2f'))
 
-	pl.text(max_std + 0.1, 0.5, r'max( $\sigma$ ) = ' + format(max_std, '0.2f'), color = 'r')
+	pl.text(max_std + 0.1, 5, r'max( $\sigma$ ) = ' + format(max_std, '0.2f'), color = 'r')
 
 	if (min_std < 2):
-		pl.text(max_std + 0.1, 0.3, r'min( $\sigma$ ) = ' + format(min_std, '0.2f'), color = 'g')
+		pl.text(max_std + 0.1, 2, r'min( $\sigma$ ) = ' + format(min_std, '0.2f'), color = 'g')
 	else:
 		pl.text(min_std - 1.75, 0.5, r'min( $\sigma$ ) = ' + format(min_std, '0.2f'), color = 'g')
 		
@@ -185,7 +185,7 @@ def do_clr_pdf(parent_dir, print_title):
 	figname = ('_'.join(parent_dir.split('/')[2:]))[:-1] + '.png'
 
 	# Parse the data in each file
-	for item in range(1, 1000):
+	for item in range(1, 251):
 		mem_color(parent_dir + str(item))
 
 	# Perform the actual plotting

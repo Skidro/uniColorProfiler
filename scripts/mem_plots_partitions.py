@@ -205,7 +205,7 @@ def do_performance_boxplots(parent_dir, print_title):
 		utilization = [str(x) for x in utilization]
 		working_set = ''
 	else:
-		utilization = ['12', '25', '37', '50', '63', '75', '87']
+		utilization = ['12', '25', '37', '50', '63', '87']
 		working_set = 'QF'
 
 	fig_prefix = '../figs/' + ('_'.join(parent_dir.split('/')[2:]))[:-1]
@@ -228,7 +228,7 @@ def do_performance_boxplots(parent_dir, print_title):
 	else:
 		title = ''
 	
-	choice = False
+	choice = True
 
 	# Create boxplot for time data
 	performance_boxplots(tm_figname, title, 't', utilization, plot_performance_data["time"], 0.05*1000, 0.15*1000, auto = choice)
@@ -241,7 +241,7 @@ def do_performance_boxplots(parent_dir, print_title):
 def main():
 
 	# Plot the default data set
-	do_performance_boxplots('../data/TG/DP/UN/UN/PF/00/', False)
+	do_performance_boxplots('../data/TG/LL/UN/UN/PF/00/', False)
 
 	return
 

@@ -72,7 +72,7 @@ class mem_page(File):
 
 		return
 
-def performance_boxplots(figname, title, data_type, utilization, parsed_data):
+def performance_boxplots(figname, title, data_type, utilization, parsed_data, y_down, y_up, auto = True):
 	""" This function can be used for drawing box plots """
 
 	# Set uniform fontsize for all the captions
@@ -101,12 +101,17 @@ def performance_boxplots(figname, title, data_type, utilization, parsed_data):
 		top = ceil(max(maxs)) + 5
 		bottom = -2
 	else:
-		ax1.set_ylabel('Time (seconds)', fontsize = pl_fontsize)
+		ax1.set_ylabel('Time (ms)', fontsize = pl_fontsize)
 		top = ceil(max(maxs)) + 0.5
 		bottom = -0.2
 
+	if not auto:
+		top = y_up
+		bottom = y_down
+
 	ax1.set_xlim(0.5, len(utilization) + 0.5)
 	ax1.set_ylim(bottom, top)
+
 	xtickNames = pl.setp(ax1, xticklabels = utilization)
 	pl.setp(xtickNames, rotation = 45, fontsize = pl_fontsize)
 
@@ -146,15 +151,15 @@ def performance_boxplots(figname, title, data_type, utilization, parsed_data):
 	weights = ['bold', 'semibold']
 	for tick, label in zip(range(7), ax1.get_xticklabels()):
 	    k = tick % 2
-	    ax1.text(pos[tick], top - (top*0.05), upperLabels[tick],
+	    ax1.text(pos[tick], top - ((top - bottom)*0.05), upperLabels[tick],
 	             horizontalalignment='center', size='small', weight=weights[k], color=boxColors[0])
-	    ax1.text(pos[tick], bottom - (bottom*0.25), bottomLabels[tick],
+	    ax1.text(pos[tick], bottom + ((top - bottom)*0.05), bottomLabels[tick],
 	             horizontalalignment='center', size='small', weight=weights[k], color=boxColors[1])
        
 	line_data = []
 	for item in range(1, numBoxes + 1, 1):
 		line_data.append(np.mean(parsed_data[item - 1]))
-		pl.text(item - 0.2, line_data[item - 1], '%.1f' % line_data[item - 1], fontsize = pl_fontsize)
+		pl.text(item - 0.2, line_data[item - 1], '%.2f' % line_data[item - 1], fontsize = pl_fontsize)
 
 	pl.plot(range(1, numBoxes + 1, 1), line_data, 'r')
 
@@ -172,9 +177,9 @@ def collate_performance_data():
 	mr_array   = []
 	time_array = []
 
-	for item in range(1, 1001, 1):
+	for item in range(1, 251, 1):
 		mr_array.append((float(plot_performance_data[str(item)][1])/plot_performance_data[str(item)][0]) * 100)
-		time_array.append(plot_performance_data[str(item)][2])
+		time_array.append((plot_performance_data[str(item)][2]) * 1000)
 	
 	# Push the miss-rate data into global hash
 	plot_performance_data["miss_rate"].append(mr_array)
@@ -208,7 +213,7 @@ def do_performance_boxplots(parent_dir, print_title):
 
 	# Parse the data in each file
 	for util in utilization:
-		for item in range(1, 1001):
+		for item in range(1, 251):
 			mem_page(parent_dir + util + '/' + str(item), platform = platform_name)
 		
 		# Collate the data collected so far
@@ -222,11 +227,13 @@ def do_performance_boxplots(parent_dir, print_title):
 	else:
 		title = ''
 	
+	choice = False
+
 	# Create boxplot for time data
-	performance_boxplots(tm_figname, title, 't', utilization, plot_performance_data["time"])
+	performance_boxplots(tm_figname, title, 't', utilization, plot_performance_data["time"], -100, 3*1000, auto = choice)
 
 	# Create boxplot for miss-rate data
-	performance_boxplots(mr_figname, title, 'm', utilization, plot_performance_data["miss_rate"])
+	performance_boxplots(mr_figname, title, 'm', utilization, plot_performance_data["miss_rate"], -5, 30, auto = choice)
 
 	return
 	

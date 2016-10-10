@@ -12,7 +12,7 @@ bins_histogram_debug = 0
 # Global Data
 plot_bins_data = {}
 plot_performance_data = {}
-ALLD_COLORS = 0x00FFFFFF
+ALLD_COLORS = 0x0FFFFFFF
 
 class mem_page(File):
 	""" A subclass of file-type objects to process miss-rate in tegra
@@ -149,9 +149,9 @@ def bins_histogram_plot(target_hash, title):
 	pl_rows = 1
 	pl_cols = 1
 	top = 35
-	right = 24
+	right = 28
 
-	pl.bar(range(24), plot_bins_data[target_hash["file"]][-1], 1, color = 'g')
+	pl.bar(range(28), plot_bins_data[target_hash["file"]][-1], 1, color = 'g')
 
 	pl.xlim(0, right)
 	pl.ylim(0, top)
